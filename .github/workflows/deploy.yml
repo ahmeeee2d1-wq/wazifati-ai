@@ -1,0 +1,47 @@
+name: نشر وظيفتي AI
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    env:
+      BASE_PATH: /${{ github.event.repository.name }}/
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: تنزيل المشروع
+        uses: actions/checkout@v7
+      - name: تجهيز Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: npm
+      - name: تثبيت الحزم
+        run: npm ci
+      - name: بناء نسخة الإنتاج
+        run: npm run build
+      - name: إعداد GitHub Pages
+        uses: actions/configure-pages@v6
+      - name: رفع ملفات الموقع
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./dist
+      - name: نشر الموقع
+        id: deployment
+        uses: actions/deploy-pages@v5
