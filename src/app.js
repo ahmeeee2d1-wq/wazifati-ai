@@ -1,5 +1,5 @@
 import { defaultState, jobs, statusLabels } from "./data.js";
-import { loadState, saveState, resetState, createApplication, updateApplicationStatus } from "./store.js";
+import { loadState, saveState, createApplication, updateApplicationStatus } from "./store.js";
 import { rankJobs } from "./matcher.js";
 import { readResumeFile, parseResume, buildImprovement } from "./cv-parser.js";
 import {
@@ -72,7 +72,7 @@ function loginTemplate() {
   const isRegister = authMode === "register";
   const cloudNote = cloudEnabled
     ? '<div class="demo-note cloud-note">اتصال سحابي آمن ومزامنة تلقائية بين أجهزتك.</div>'
-    : '<div class="demo-note">وضع التجربة المحلي مفعّل. اربط Supabase لتشغيل الحسابات والمزامنة السحابية.</div>';
+    : '<div class="demo-note">تسجيل الدخول متوقف مؤقتًا حتى يكتمل ربط الحسابات الآمنة.</div>';
   return `<main class="login-screen">
     <section class="login-visual">
       <div class="login-brand"><img src="./assets/logo.svg" alt=""><strong>وظيفتي AI</strong></div>
@@ -90,14 +90,14 @@ function loginTemplate() {
     </section>
     <section class="login-panel">
       <form class="login-card" id="login-form">
-        <span class="cloud-badge">${cloudEnabled ? "● النسخة السحابية" : "● وضع التجربة"}</span>
+        <span class="cloud-badge">${cloudEnabled ? "● حساب آمن" : "● جارٍ التجهيز"}</span>
         <h2>${isRegister ? "أنشئ حسابك" : "أهلًا بك"}</h2>
         <p>${isRegister ? "أنشئ حسابًا واحدًا واستخدمه من الكمبيوتر وأي جوال." : "سجّل دخولك لمتابعة فرصك وطلباتك من أي جهاز."}</p>
         ${isRegister ? '<div class="field"><label for="register-name">الاسم الكامل</label><input id="register-name" type="text" required autocomplete="name"></div>' : ""}
-        <div class="field"><label for="login-email">البريد الإلكتروني</label><input id="login-email" type="email" value="${cloudEnabled ? "" : "ahmed@example.com"}" required autocomplete="email"></div>
-        <div class="field"><label for="login-password">كلمة المرور</label><input id="login-password" type="password" value="${cloudEnabled ? "" : "Demo1234"}" required minlength="8" autocomplete="${isRegister ? "new-password" : "current-password"}"></div>
-        <button class="btn btn-primary" type="submit">${isRegister ? "إنشاء الحساب" : "تسجيل الدخول"} ${icons.arrow}</button>
-        ${cloudEnabled ? `<button class="btn btn-outline" type="button" data-action="toggle-auth">${isRegister ? "لدي حساب بالفعل" : "إنشاء حساب جديد"}</button>` : '<button class="btn btn-outline" type="button" data-action="demo-login">الدخول إلى النسخة التجريبية</button>'}
+        <div class="field"><label for="login-email">البريد الإلكتروني</label><input id="login-email" type="email" required autocomplete="email" ${cloudEnabled ? "" : "disabled"}></div>
+        <div class="field"><label for="login-password">كلمة المرور</label><input id="login-password" type="password" required minlength="8" autocomplete="${isRegister ? "new-password" : "current-password"}" ${cloudEnabled ? "" : "disabled"}></div>
+        <button class="btn btn-primary" type="submit" ${cloudEnabled ? "" : "disabled"}>${isRegister ? "إنشاء الحساب" : "تسجيل الدخول"} ${icons.arrow}</button>
+        ${cloudEnabled ? `<button class="btn btn-outline" type="button" data-action="toggle-auth">${isRegister ? "لدي حساب بالفعل" : "إنشاء حساب جديد"}</button>` : ""}
         ${cloudNote}
         <div class="legal-links"><a href="./privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a><span>•</span><a href="./terms.html" target="_blank" rel="noopener">شروط الاستخدام</a></div>
       </form>
@@ -143,25 +143,21 @@ function dashboardPage() {
   const ranked = rankJobs(availableJobs, { ...state.profile, targetCities: state.settings.targetCities, targetRoles: state.settings.targetRoles });
   const strongMatches = ranked.filter((job) => job.match >= 80).length;
   const interviews = state.applications.filter((item) => item.status === "interview").length;
-  return `<section class="welcome"><div><h2>صباح الخير، ${esc(state.profile.fullName.split(" ")[0])} 👋</h2><p>لديك ${strongMatches} فرص قوية جديدة، ورسالة توظيف تحتاج انتباهك.</p></div><button class="btn btn-primary" data-page="jobs">${icons.search} ابحث عن فرص مناسبة</button></section>
+  return `<section class="welcome"><div><h2>أهلًا ${esc(state.profile.fullName.split(" ")[0])} 👋</h2><p>تابع فرصك وطلباتك من لوحة واحدة واضحة.</p></div><button class="btn btn-primary" data-page="jobs">${icons.search} ابحث عن فرص مناسبة</button></section>
     <section class="stats">
-      ${statCard("الوظائف المطابقة", strongMatches, "+4 هذا الأسبوع", icons.jobs, "")}
+      ${statCard("الوظائف المطابقة", strongMatches, "حسب ملفك", icons.jobs, "")}
       ${statCard("طلبات التقديم", state.applications.length, `${todayCount()} اليوم`, icons.applications, "gold")}
       ${statCard("المقابلات", interviews, interviews ? "تحتاج متابعة" : "لا توجد حاليًا", icons.calendar, "blue")}
       ${statCard("رسائل جديدة", unreadCount(), "من البريد", icons.inbox, "red")}
     </section>
     <section class="grid grid-2">
       <div class="grid">
-        <article class="card"><header class="card-head"><div><h3>أفضل الفرص لك</h3><p>مرتبة حسب مهاراتك وأهدافك</p></div><button class="text-link" data-page="jobs">عرض الكل ←</button></header><div class="card-body">${ranked.slice(0,4).map(jobMini).join("")}</div></article>
-        <article class="card"><header class="card-head"><div><h3>آخر التقديمات</h3><p>تحديث تلقائي لحالة كل طلب</p></div><button class="text-link" data-page="applications">السجل الكامل ←</button></header><div class="card-body">${state.applications.slice(0,4).map(applicationMini).join("")}</div></article>
+        <article class="card"><header class="card-head"><div><h3>أفضل الفرص لك</h3><p>مرتبة حسب مهاراتك وأهدافك</p></div><button class="text-link" data-page="jobs">عرض الكل ←</button></header><div class="card-body">${ranked.length ? ranked.slice(0,4).map(jobMini).join("") : '<div class="empty">لا توجد وظائف مضافة بعد.</div>'}</div></article>
+        <article class="card"><header class="card-head"><div><h3>آخر التقديمات</h3><p>تحديث تلقائي لحالة كل طلب</p></div><button class="text-link" data-page="applications">السجل الكامل ←</button></header><div class="card-body">${state.applications.length ? state.applications.slice(0,4).map(applicationMini).join("") : '<div class="empty">لا توجد تقديمات حتى الآن.</div>'}</div></article>
       </div>
       <div class="grid">
         <article class="card"><header class="card-head"><div><h3>قوة ملفك المهني</h3><p>جاهز للتقديم بدرجة جيدة</p></div></header><div class="card-body"><div class="profile-meter"><div class="ring" style="--value:${state.profile.atsScore || 0}"><strong>${state.profile.atsScore || 0}<small>%</small></strong></div><div class="meter-copy"><h4>${state.profile.atsScore >= 80 ? "ملف قوي جدًا" : "باقي لمسات بسيطة"}</h4><p>حسّن الإنجازات والكلمات المفتاحية لرفع فرص وصول سيرتك لمسؤول التوظيف.</p><button class="btn btn-secondary" data-page="cv">تحسين السيرة</button></div></div></div></article>
-        <article class="card"><header class="card-head"><div><h3>نشاط اليوم</h3><p>ما حدث في حسابك</p></div></header><div class="card-body"><div class="timeline-list">
-          ${timelineItem("دعوة مقابلة جديدة", "حلول الأعمال السعودية", "اليوم، 10:40", "success")}
-          ${timelineItem("تمت مشاهدة طلبك", "منسق مشاريع — مجموعة نسما", "اليوم، 09:20")}
-          ${timelineItem("فرص جديدة متاحة", `${strongMatches} وظائف مناسبة في مكة وجدة`, "أمس")}
-        </div></div></article>
+        <article class="card"><header class="card-head"><div><h3>نشاط اليوم</h3><p>ما حدث في حسابك</p></div></header><div class="card-body"><div class="empty">سيظهر نشاط حسابك الحقيقي هنا.</div></div></article>
         <div class="notice">${icons.shield}<span><strong>أنت المتحكم دائمًا.</strong> لن يرسل النظام أي تقديم خارجي كامل في النسخة الأولى إلا بعد مراجعتك وتأكيدك.</span></div>
       </div>
     </section>`;
@@ -182,7 +178,7 @@ function cvPage() {
           <div id="upload-secondary" style="${state.profile.resumeName ? "margin-top:12px" : "display:none"}">${state.profile.resumeName ? uploadZone(true) : ""}</div>
           <input id="cv-file" type="file" accept=".pdf,.docx,.txt,.md" hidden>
         </div></article>
-        <article class="card"><header class="card-head"><div><h3>البيانات المستخرجة</h3><p>راجعها وعدّل أي معلومة قبل التقديم</p></div><span class="chip green">${icons.check} محفوظة محليًا</span></header><div class="card-body">
+        <article class="card"><header class="card-head"><div><h3>البيانات المستخرجة</h3><p>راجعها وعدّل أي معلومة قبل التقديم</p></div><span class="chip green">${icons.check} محفوظة بأمان</span></header><div class="card-body">
           <form id="profile-form" class="profile-fields">
             ${field("الاسم الكامل", "fullName", state.profile.fullName)}${field("البريد الإلكتروني", "email", state.profile.email, "email")}
             ${field("رقم الجوال", "phone", state.profile.phone, "tel")}${field("المدينة", "city", state.profile.city)}
@@ -196,59 +192,14 @@ function cvPage() {
       <div class="grid">
         <article class="score-hero"><div class="ring" style="--value:${improvement.scoreAfter}"><strong>${improvement.scoreAfter}<small>%</small></strong></div><div class="score-copy"><h3>نسخة أقوى للـ ATS</h3><p>أعدنا بناء الملخص والكلمات المفتاحية بناءً على الوظائف المستهدفة.</p><div class="score-compare"><span>قبل ${improvement.scoreBefore}%</span><b>←</b><span>بعد ${improvement.scoreAfter}%</span></div></div></article>
         <article class="card"><header class="card-head"><div><h3>اقتراحات التحسين</h3><p>تغييرات عملية ترفع جودة السيرة</p></div></header><div class="card-body"><div class="improvement-list">${improvement.suggestions.map((item) => `<div class="improvement"><span class="check">✓</span><span>${esc(item)}</span></div>`).join("")}</div></div></article>
-        <article class="card"><header class="card-head"><div><h3>معاينة النسخة المحسنة</h3><p>صياغة واضحة وخالية من العناصر المربكة للـ ATS</p></div></header><div class="card-body"><div class="cv-preview"><h2>${esc(state.profile.fullName)}</h2><span class="cv-headline">${esc(improvement.headline)}</span><p>${esc(state.profile.email)} · ${esc(state.profile.phone)} · ${esc(state.profile.city)}</p><h4>الملخص المهني</h4><p>${esc(improvement.summary)}</p><h4>المهارات</h4><p>${esc(state.profile.skills.join(" • "))}</p><h4>الخبرات</h4><ul>${state.profile.experiences.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div></article>
-      </div>
-    </div>`;
-}
-
-function uploadZone(small = false) { return `<div class="upload-zone" data-action="choose-cv">${small ? "" : `<span class="upload-icon">${icons.upload}</span>`}<h3>${small ? "اسحب نسخة جديدة هنا" : "اسحب سيرتك هنا أو اخترها من جهازك"}</h3><p>نحلل محتوى الملف على جهازك في النسخة التجريبية</p>${small ? "" : '<button class="btn btn-primary" type="button">اختيار السيرة الذاتية</button>'}</div>`; }
-function field(label, name, value, type = "text", full = false) { return `<div class="field ${full ? "full" : ""}"><label for="${name}">${label}</label><input id="${name}" name="${name}" type="${type}" value="${esc(value)}"></div>`; }
-function textareaField(label, name, values) { return `<div class="field full"><label for="${name}">${label}</label><textarea id="${name}" name="${name}" placeholder="كل عنصر في سطر مستقل">${esc((values || []).join("\n"))}</textarea></div>`; }
-function tagField(label, name, values) { return `<div class="field full"><label>${label}</label><div class="tags-editor" data-tags="${name}">${(values || []).map((tag, i) => `<span class="tag">${esc(tag)}<button type="button" data-action="remove-tag" data-list="${name}" data-index="${i}" aria-label="حذف">×</button></span>`).join("")}<input class="tag-input" data-tag-input="${name}" placeholder="اكتب ثم اضغط Enter"></div></div>`; }
-
-function jobsPage() {
-  const ranked = rankJobs(availableJobs, { ...state.profile, targetCities: state.settings.targetCities, targetRoles: state.settings.targetRoles });
-  const filtered = ranked.filter((job) => (cityFilter === "الكل" || job.city === cityFilter) && `${job.title} ${job.company} ${job.skills.join(" ")}`.toLowerCase().includes(jobQuery.toLowerCase()) && job.match >= state.settings.minMatch);
-  return `<section class="welcome"><div><h2>وظائف مختارة لك</h2><p>مرتبة حسب مهاراتك ومدنك المستهدفة — لا يوجد تقديم عشوائي.</p></div><span class="chip green">${filtered.length} فرصة مناسبة</span></section>
-    <div class="section-tools"><label class="search">${icons.search}<input id="job-search" value="${esc(jobQuery)}" placeholder="ابحث بالمسمى أو الشركة أو المهارة"></label><select id="city-filter" class="field-select"><option>الكل</option><option ${cityFilter === "مكة المكرمة" ? "selected" : ""}>مكة المكرمة</option><option ${cityFilter === "جدة" ? "selected" : ""}>جدة</option></select><button class="btn btn-outline" data-page="settings">درجة المطابقة: ${state.settings.minMatch}%+</button></div>
-    <div class="job-grid">${filtered.length ? filtered.map(jobCard).join("") : '<div class="card empty"><div class="empty-icon">'+icons.search+'</div><h3>لا توجد نتائج بهذه التصفية</h3><p>جرّب كلمة أخرى أو خفّض درجة المطابقة من الإعدادات.</p></div>'}</div>`;
-}
-
-function jobCard(job) {
-  const duplicate = state.applications.some((item) => item.jobId === job.id);
-  return `<article class="job-card"><div class="job-card-top"><span class="company-logo">${esc(job.company.slice(0,2))}</span><div class="job-title"><h3>${esc(job.title)}</h3><p>${esc(job.company)} ${job.verified ? '<span class="verified">● موثّق</span>' : ""}</p></div><div class="job-score"><strong>${job.match}%</strong><span>مطابقة</span></div></div><div class="job-meta"><span class="chip">${icons.pin} ${esc(job.city)}</span><span class="chip">${esc(job.workplace)}</span><span class="chip gold">${esc(job.salary)}</span></div><p>${esc(job.description)}</p><div class="match-reason">${icons.spark} ${esc(job.matchReasons[0] || "تتوافق مع أهدافك المهنية")}</div><div class="job-actions">${duplicate ? '<span class="duplicate-note">✓ سبق التقديم — محمي من التكرار</span>' : `<button class="btn btn-primary" data-action="apply" data-job="${job.id}">ابدأ التقديم</button><button class="btn btn-outline" data-action="job-details" data-job="${job.id}">التفاصيل</button>`}</div></article>`;
-}
-
-function applicationsPage() {
-  const counts = Object.keys(statusLabels).reduce((acc, key) => ({ ...acc, [key]: state.applications.filter((item) => item.status === key).length }), {});
-  return `<section class="welcome"><div><h2>كل تقديم في مكانه</h2><p>تابع ما أُرسل، وما شوهد، والمقابلات، ومنع التقديم لنفس الوظيفة مرتين.</p></div><button class="btn btn-primary" data-page="jobs">${icons.plus} تقديم جديد</button></section>
-    <section class="stats">${statCard("إجمالي التقديمات", state.applications.length, `${todayCount()} اليوم`, icons.applications, "")}${statCard("قيد المراجعة", counts.applied + counts.viewed, "طلبات نشطة", icons.cv, "gold")}${statCard("المقابلات", counts.interview, "فرصة مهمة", icons.calendar, "blue")}${statCard("العروض", counts.offer, counts.offer ? "مبروك!" : "نسعى للأول", icons.jobs, "red")}</section>
-    <article class="card"><header class="card-head"><div><h3>سجل التقديمات</h3><p>يمكنك تحديث الحالة يدويًا في أي وقت</p></div><span class="chip green">منع التكرار مفعّل</span></header><div class="table-wrap">${state.applications.length ? `<table class="data-table"><thead><tr><th>الوظيفة</th><th>المدينة</th><th>تاريخ التقديم</th><th>المطابقة</th><th>الحالة</th><th>طريقة التقديم</th><th>تحديث</th></tr></thead><tbody>${state.applications.map(applicationRow).join("")}</tbody></table>` : '<div class="empty">لا توجد تقديمات بعد.</div>'}</div></article>`;
-}
-function applicationRow(item) { return `<tr><td><div class="table-title"><span class="company-logo">${esc(item.company.slice(0,2))}</span><div><strong>${esc(item.title)}</strong><span>${esc(item.company)}</span></div></div></td><td>${esc(item.city)}</td><td>${formatDate(item.appliedAt)}</td><td><span class="match-pill">${item.match}%</span></td><td><span class="status status-${item.status}">${statusLabels[item.status]}</span></td><td>${item.mode === "manual" ? "يدوي" : item.mode === "review" ? "بمراجعة" : "تلقائي محدود"}</td><td><select class="status-select" data-status-id="${item.id}">${Object.entries(statusLabels).map(([value,label]) => `<option value="${value}" ${item.status === value ? "selected" : ""}>${label}</option>`).join("")}</select></td></tr>`; }
-
-function inboxPage() {
-  const selected = state.messages.find((item) => item.id === selectedMessageId) || state.messages[0];
-  return `<section class="welcome"><div><h2>ردود التوظيف بوضوح</h2><p>تصنيف رسائل التوظيف وربطها بطلباتك لتعرف ما يحتاج متابعة.</p></div><span class="chip green">${state.settings.emailMonitoring ? "المتابعة مفعّلة" : "المتابعة متوقفة"}</span></section>
-    <div class="notice" style="margin-bottom:18px">${icons.inbox}<span>هذه الصفحة تعرض نموذج الربط. ربط Gmail أو Outlook الفعلي يتم لاحقًا عبر إذن قراءة محدود، ولا يرسل رسائل نيابة عنك.</span></div>
-    <article class="card inbox-layout"><div class="message-list">${state.messages.map((message) => messageItem(message, selected?.id)).join("")}</div>${selected ? messageView(selected) : '<div class="empty">لا توجد رسائل.</div>'}</article>`;
-}
-function messageItem(message, activeId) { return `<button class="message-item ${message.id === activeId ? "active" : ""} ${!message.read ? "unread" : ""}" data-message="${message.id}"><h4>${esc(message.sender)}</h4><p>${esc(message.subject)} — ${esc(message.preview)}</p><time>${formatDate(message.receivedAt, true)}</time></button>`; }
-function messageView(message) { const application = state.applications.find((item) => item.id === message.applicationId); const insight = message.category === "interview" ? "تم اكتشاف دعوة مقابلة. نقترح تحديث حالة الطلب إلى «مقابلة» وإضافة الموعد إلى تقويمك." : message.category === "confirmation" ? "هذه رسالة تأكيد استلام، وتم ربطها تلقائيًا بطلب التقديم الصحيح." : "هذه رسالة فرص عامة ولا تغيّر حالة أي طلب."; return `<div class="message-view"><header class="message-view-head"><span class="chip green">${message.category === "interview" ? "دعوة مقابلة" : message.category === "confirmation" ? "تأكيد استلام" : "تنبيه وظائف"}</span><h2>${esc(message.subject)}</h2><p>من: ${esc(message.sender)} · ${formatDate(message.receivedAt)}</p></header><div class="message-body"><p>مرحبًا ${esc(state.profile.fullName.split(" ")[0])}،</p><p>${esc(message.preview)} نقدر اهتمامك بالفرصة، وسيتم تزويدك بالتفاصيل والخطوات التالية عبر البريد.</p><p>مع التحية،<br>فريق التوظيف</p></div><div class="email-insight"><strong>${icons.spark} تحليل الرسالة</strong><p>${insight}</p>${application && message.category === "interview" && application.status !== "interview" ? `<button class="btn btn-primary" style="margin-top:10px" data-action="mark-interview" data-app="${application.id}">تحديث الحالة إلى مقابلة</button>` : ""}</div></div>`; }
-
-function settingsPage() {
-  return `<section class="welcome"><div><h2>أنت تحدد القواعد</h2><p>اختر أين نبحث، وما الذي نرشحه، وكم طلبًا تسمح به يوميًا.</p></div><button class="btn btn-primary" data-action="save-settings">حفظ الإعدادات</button></section>
-    <div class="grid grid-2"><div class="grid">
-      <article class="card settings-group"><header class="card-head"><div><h3>أهداف البحث</h3><p>تُستخدم في ترتيب الوظائف وحساب المطابقة</p></div></header><div class="card-body"><div class="profile-fields">
-        <div class="field full"><label>المدن المستهدفة</label><div class="tags-editor">${state.settings.targetCities.map((city) => `<span class="tag">${esc(city)}</span>`).join("")}<input id="settings-cities" class="tag-input" value="${esc(state.settings.targetCities.join("، "))}"></div></div>
-        <div class="field full"><label>المسميات المستهدفة</label><textarea id="settings-roles" placeholder="كل مسمى في سطر">${esc(state.settings.targetRoles.join("\n"))}</textarea></div>
+        <article class="card"><header class="card-head"><div><h3>معاينة النسخة المحسنة</h3><p>صياغة واضحة وخالية من العناصر المربكة للـ ATS</p></div></header><div class="card-body"><div class="cv-preview"><h2>${esc(state.profile.fullName)}</h2><span class="cv-headline">${esc(improvement.headline)}</span><p>${esc(state.profile.email)} · ${esc(state.profile.phone)} · ${esc(state.…2750 tokens truncated…ings-roles" placeholder="كل مسمى في سطر">${esc(state.settings.targetRoles.join("\n"))}</textarea></div>
         <div class="field"><label>الحد اليومي للتقديم</label><input id="daily-limit" type="number" min="1" max="20" value="${state.settings.dailyLimit}"></div>
         <div class="field"><label>أقل درجة مطابقة</label><input id="min-match" type="number" min="40" max="95" value="${state.settings.minMatch}"></div>
       </div></div></article>
       <article class="card settings-group"><header class="card-head"><div><h3>مستوى الأتمتة</h3><p>حتى الوضع التلقائي يلتزم بالحدود ومنع التكرار</p></div></header><div class="card-body"><div class="automation-options">${automationOption("manual", "تقديم يدوي", "تفتح صفحة الوظيفة وتؤكد الإرسال بنفسك.")}${automationOption("review", "شبه تلقائي", "نجهز البيانات والخطاب ثم تراجعها وتؤكد.")}${automationOption("limited", "تلقائي محدود", "يعمل فقط مع الجهات المربوطة والموثوقة وضمن حدك اليومي.")}</div><div class="notice" style="margin-top:13px">${icons.shield}<span>أي إرسال خارجي يظل محكومًا بموافقتك وبالموصلات الرسمية للجهة، ولا يوجد تقديم عشوائي.</span></div></div></article>
     </div><div class="grid">
       <article class="card settings-group"><header class="card-head"><div><h3>التفضيلات والخصوصية</h3><p>إعدادات قابلة للتغيير في أي وقت</p></div></header><div class="card-body">${toggleSetting("remoteAllowed", "السماح بالعمل عن بُعد", "إظهار فرص مكة وجدة التي تتيح العمل عن بُعد أو الهجين.")}${toggleSetting("excludeCommissionOnly", "استبعاد وظائف العمولة فقط", "عدم عرض الوظائف التي لا تحتوي على راتب أساسي.")}${toggleSetting("requireConfirmation", "طلب تأكيد قبل كل تقديم", "طبقة أمان تمنع الإرسال غير المقصود.")}${toggleSetting("emailMonitoring", "متابعة بريد التوظيف", "تصنيف ردود جهات التوظيف بعد ربط البريد بإذن قراءة.")}${toggleSetting("notifyInterviews", "تنبيه المقابلات فورًا", "إظهار تنبيه مهم عند اكتشاف دعوة مقابلة.")}</div></article>
-      <article class="card settings-group"><header class="card-head"><div><h3>الحساب والأجهزة</h3><p>${cloudEnabled ? "مزامنة آمنة بين الكمبيوتر والجوال" : "إدارة النسخة التجريبية المحلية"}</p></div><span class="chip ${cloudEnabled ? "green" : "gold"}">${cloudEnabled ? "متصل سحابيًا" : "محلي"}</span></header><div class="card-body"><div class="setting-row"><div class="setting-copy"><h4>${esc(state.profile.fullName)}</h4><p>${esc(state.profile.email)} · ${esc(state.profile.phone)}</p></div><button class="btn btn-outline" data-page="cv">تعديل الملف</button></div><div class="setting-row"><div class="setting-copy"><h4>تثبيت وظيفتي AI على الجوال</h4><p>يظهر كتطبيق مستقل على الشاشة الرئيسية ويعمل من نفس الحساب.</p></div><button class="btn btn-primary" data-action="install-app">تثبيت التطبيق</button></div>${cloudEnabled ? '<div class="setting-row"><div class="setting-copy"><h4>حفظ سحابي خاص</h4><p>السيرة والتقديمات معزولة عن بقية المستخدمين بسياسات وصول على مستوى قاعدة البيانات.</p></div><span class="status status-offer">محمي</span></div>' : '<div class="setting-row"><div class="setting-copy"><h4>حذف بيانات التجربة</h4><p>يمسح السيرة والتقديمات والإعدادات المحفوظة على هذا الجهاز.</p></div><button class="btn btn-danger" data-action="reset-data">حذف البيانات</button></div>'}<div class="setting-row"><div class="setting-copy"><h4>تسجيل الخروج</h4><p>${cloudEnabled ? "يمكنك العودة من أي جهاز بنفس الحساب." : "تظل البيانات محفوظة محليًا حتى تعود."}</p></div><button class="btn btn-outline" data-action="logout">تسجيل الخروج</button></div></div></article>
+      <article class="card settings-group"><header class="card-head"><div><h3>الحساب والأجهزة</h3><p>مزامنة آمنة بين الكمبيوتر والجوال</p></div><span class="chip green">متصل سحابيًا</span></header><div class="card-body"><div class="setting-row"><div class="setting-copy"><h4>${esc(state.profile.fullName)}</h4><p>${esc(state.profile.email)} · ${esc(state.profile.phone)}</p></div><button class="btn btn-outline" data-page="cv">تعديل الملف</button></div><div class="setting-row"><div class="setting-copy"><h4>تثبيت وظيفتي AI على الجوال</h4><p>يظهر كتطبيق مستقل على الشاشة الرئيسية ويعمل من نفس الحساب.</p></div><button class="btn btn-primary" data-action="install-app">تثبيت التطبيق</button></div><div class="setting-row"><div class="setting-copy"><h4>حفظ سحابي خاص</h4><p>السيرة والتقديمات معزولة عن بقية المستخدمين بسياسات وصول على مستوى قاعدة البيانات.</p></div><span class="status status-offer">محمي</span></div><div class="setting-row"><div class="setting-copy"><h4>تسجيل الخروج</h4><p>يمكنك العودة من أي جهاز بنفس الحساب.</p></div><button class="btn btn-outline" data-action="logout">تسجيل الخروج</button></div></div></article>
     </div></div>`;
 }
 function automationOption(value, title, description) { return `<label class="automation-option ${state.settings.automation === value ? "selected" : ""}"><input type="radio" name="automation" value="${value}" ${state.settings.automation === value ? "checked" : ""}><span class="radio"></span><strong>${title}</strong><p>${description}</p></label>`; }
@@ -259,7 +210,7 @@ function applyModal(job) {
   const improvement = buildImprovement({ ...state.profile, targetRoles: [job.title] });
   const cover = `السادة/ فريق التوظيف في ${job.company}،\n\nأتقدم باهتمام لشغل وظيفة ${job.title}. أمتلك خبرة ومهارات مرتبطة بمتطلبات الدور، خصوصًا في ${job.matchedSkills?.slice(0,3).join("، ") || state.profile.skills.slice(0,3).join("، ")}. أؤمن بقدرتي على الإسهام بفاعلية وتحقيق نتائج ملموسة ضمن فريقكم.\n\nأرفق سيرتي الذاتية، ويسعدني مناقشة مدى ملاءمتي للفرصة.\n\nمع خالص التحية،\n${state.profile.fullName}`;
   const modeText = mode === "manual" ? "سيُسجل الطلب كمسودة، ثم تفتح رابط الجهة وتؤكد إتمام التقديم." : mode === "review" ? "جهزنا البيانات والخطاب. تأكيدك يسجل الطلب كتقديم تمت مراجعته." : "سيُضاف الطلب إلى طابور الجهات الموثوقة فقط؛ الإرسال الخارجي غير مفعّل محليًا.";
-  const confirmation = cloudEnabled ? "راجعت بيانات الوظيفة والخطاب، وأوافق على حفظ هذا التقديم في حسابي وتنفيذه وفق وضع الأتمتة الذي اخترته." : "راجعت بيانات الوظيفة والخطاب وأوافق على تسجيل هذا التقديم. أفهم أن وضع التجربة لا يرسل الطلب فعليًا لموقع خارجي.";
+  const confirmation = "راجعت بيانات الوظيفة والخطاب، وأوافق على حفظ هذا التقديم في حسابي وتنفيذه وفق وضع الأتمتة الذي اخترته.";
   return `<div class="modal-backdrop" data-action="close-modal"><section class="modal" role="dialog" aria-modal="true"><header class="modal-head"><h3>مراجعة التقديم</h3><button class="icon-btn" data-action="close-modal">×</button></header><div class="modal-body"><div class="apply-summary"><span class="company-logo">${esc(job.company.slice(0,2))}</span><div><h4>${esc(job.title)}</h4><p>${esc(job.company)} · ${esc(job.city)} · مطابقة ${job.match}%</p></div></div><div class="notice" style="margin-top:13px">${icons.shield}<span>${modeText}</span></div><label class="field" style="margin-top:15px"><span>خطاب التغطية المقترح</span><textarea id="cover-letter" class="cover-letter">${esc(cover)}</textarea></label><div class="improvement"><span class="check">✓</span><span>السيرة المستخدمة: ${esc(state.profile.resumeName || "النسخة المحسنة")}</span></div><label class="confirm-line" style="margin-top:14px"><input id="apply-confirm" type="checkbox"><span>${confirmation}</span></label></div><footer class="modal-foot"><button class="btn btn-outline" data-action="close-modal">إلغاء</button><button class="btn btn-primary" data-action="confirm-apply" data-job="${job.id}" disabled>تأكيد وحفظ التقديم</button></footer></section></div>`;
 }
 
@@ -306,7 +257,7 @@ app.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (event.target.id === "login-form") {
     if (!cloudEnabled) {
-      state.session = true; persist(); render(); toast("مرحبًا بك في وظيفتي AI");
+      toast("تسجيل الدخول غير متاح حتى يكتمل ربط الحسابات", "error");
     } else {
       const email = document.querySelector("#login-email")?.value.trim();
       const password = document.querySelector("#login-password")?.value;
@@ -344,7 +295,6 @@ app.addEventListener("click", async (event) => {
   if (pageTarget) { state.page = pageTarget.dataset.page; persist(); render(); window.scrollTo(0,0); return; }
   const target = event.target.closest("[data-action], [data-toggle], [data-message]");
   if (!target) return;
-  if (target.dataset.action === "demo-login") { state.session = true; persist(); render(); toast("تم فتح النسخة التجريبية"); }
   if (target.dataset.action === "toggle-auth") { authMode = authMode === "login" ? "register" : "login"; render(); return; }
   if (target.dataset.action === "logout") { try { await signOutCloud(); } catch {} state.session = false; persist(); render(); return; }
   if (target.dataset.action === "install-app") {
@@ -389,7 +339,6 @@ app.addEventListener("click", async (event) => {
     try { if (cloudEnabled) await saveCloudSettings(state.settings); persist(); render(); toast("تم حفظ الإعدادات ومزامنتها"); }
     catch (error) { toast(error.message || "تعذر حفظ الإعدادات", "error"); }
   }
-  if (target.dataset.action === "reset-data") { if (confirm("هل تريد حذف جميع بيانات النسخة التجريبية؟")) { resetState(); state = structuredClone(defaultState); state.session = true; persist(); render(); toast("تمت استعادة بيانات التجربة"); } }
 });
 
 app.addEventListener("change", async (event) => {
@@ -420,6 +369,7 @@ window.addEventListener("beforeinstallprompt", (event) => {
 
 async function boot() {
   try {
+    state.session = false;
     if (cloudEnabled) {
       const session = await getCloudSession();
       if (session?.user) {
