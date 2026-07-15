@@ -75,7 +75,7 @@ function loginTemplate() {
     : '<div class="demo-note">تسجيل الدخول متوقف مؤقتًا حتى يكتمل ربط الحسابات الآمنة.</div>';
   return `<main class="login-screen">
     <section class="login-visual">
-      <div class="login-brand"><img src="./assets/logo.svg" alt=""><strong>وظيفتي AI</strong></div>
+      <div class="login-brand"><img src="./assets/logo.svg" alt=""><strong>وظّفني AI</strong></div>
       <div class="login-message">
         <span class="eyebrow">مساعدك الشخصي للبحث والتقديم</span>
         <h1>فرصتك القادمة،<br><span>أقرب مما تتخيل.</span></h1>
@@ -115,7 +115,7 @@ function shellTemplate() {
   const title = pageTitles[state.page] || pageTitles.dashboard;
   return `<div class="app-shell">
     <aside class="sidebar">
-      <div class="brand"><img src="./assets/logo.svg" alt=""><div><strong>وظيفتي AI</strong><span>مساعد التوظيف الشخصي</span></div></div>
+      <div class="brand"><img src="./assets/logo.svg" alt=""><div><strong>وظّفني AI</strong><span>مساعد التوظيف الشخصي</span></div></div>
       <div class="nav-title">القائمة الرئيسية</div>
       <nav class="nav">${navItems.slice(0,5).map(([id,label,icon]) => navButton(id,label,icon)).join("")}</nav>
       <div class="nav-title">الحساب</div>
@@ -199,7 +199,7 @@ function cvPage() {
       <article class="card settings-group"><header class="card-head"><div><h3>مستوى الأتمتة</h3><p>حتى الوضع التلقائي يلتزم بالحدود ومنع التكرار</p></div></header><div class="card-body"><div class="automation-options">${automationOption("manual", "تقديم يدوي", "تفتح صفحة الوظيفة وتؤكد الإرسال بنفسك.")}${automationOption("review", "شبه تلقائي", "نجهز البيانات والخطاب ثم تراجعها وتؤكد.")}${automationOption("limited", "تلقائي محدود", "يعمل فقط مع الجهات المربوطة والموثوقة وضمن حدك اليومي.")}</div><div class="notice" style="margin-top:13px">${icons.shield}<span>أي إرسال خارجي يظل محكومًا بموافقتك وبالموصلات الرسمية للجهة، ولا يوجد تقديم عشوائي.</span></div></div></article>
     </div><div class="grid">
       <article class="card settings-group"><header class="card-head"><div><h3>التفضيلات والخصوصية</h3><p>إعدادات قابلة للتغيير في أي وقت</p></div></header><div class="card-body">${toggleSetting("remoteAllowed", "السماح بالعمل عن بُعد", "إظهار فرص مكة وجدة التي تتيح العمل عن بُعد أو الهجين.")}${toggleSetting("excludeCommissionOnly", "استبعاد وظائف العمولة فقط", "عدم عرض الوظائف التي لا تحتوي على راتب أساسي.")}${toggleSetting("requireConfirmation", "طلب تأكيد قبل كل تقديم", "طبقة أمان تمنع الإرسال غير المقصود.")}${toggleSetting("emailMonitoring", "متابعة بريد التوظيف", "تصنيف ردود جهات التوظيف بعد ربط البريد بإذن قراءة.")}${toggleSetting("notifyInterviews", "تنبيه المقابلات فورًا", "إظهار تنبيه مهم عند اكتشاف دعوة مقابلة.")}</div></article>
-      <article class="card settings-group"><header class="card-head"><div><h3>الحساب والأجهزة</h3><p>مزامنة آمنة بين الكمبيوتر والجوال</p></div><span class="chip green">متصل سحابيًا</span></header><div class="card-body"><div class="setting-row"><div class="setting-copy"><h4>${esc(state.profile.fullName)}</h4><p>${esc(state.profile.email)} · ${esc(state.profile.phone)}</p></div><button class="btn btn-outline" data-page="cv">تعديل الملف</button></div><div class="setting-row"><div class="setting-copy"><h4>تثبيت وظيفتي AI على الجوال</h4><p>يظهر كتطبيق مستقل على الشاشة الرئيسية ويعمل من نفس الحساب.</p></div><button class="btn btn-primary" data-action="install-app">تثبيت التطبيق</button></div><div class="setting-row"><div class="setting-copy"><h4>حفظ سحابي خاص</h4><p>السيرة والتقديمات معزولة عن بقية المستخدمين بسياسات وصول على مستوى قاعدة البيانات.</p></div><span class="status status-offer">محمي</span></div><div class="setting-row"><div class="setting-copy"><h4>تسجيل الخروج</h4><p>يمكنك العودة من أي جهاز بنفس الحساب.</p></div><button class="btn btn-outline" data-action="logout">تسجيل الخروج</button></div></div></article>
+      <article class="card settings-group"><header class="card-head"><div><h3>الحساب والأجهزة</h3><p>مزامنة آمنة بين الكمبيوتر والجوال</p></div><span class="chip green">متصل سحابيًا</span></header><div class="card-body"><div class="setting-row"><div class="setting-copy"><h4>${esc(state.profile.fullName)}</h4><p>${esc(state.profile.email)} · ${esc(state.profile.phone)}</p></div><button class="btn btn-outline" data-page="cv">تعديل الملف</button></div><div class="setting-row"><div class="setting-copy"><h4>تثبيت وظّفني AI على الجوال</h4><p>يظهر كتطبيق مستقل على الشاشة الرئيسية ويعمل من نفس الحساب.</p></div><button class="btn btn-primary" data-action="install-app">تثبيت التطبيق</button></div><div class="setting-row"><div class="setting-copy"><h4>حفظ سحابي خاص</h4><p>السيرة والتقديمات معزولة عن بقية المستخدمين بسياسات وصول على مستوى قاعدة البيانات.</p></div><span class="status status-offer">محمي</span></div><div class="setting-row"><div class="setting-copy"><h4>تسجيل الخروج</h4><p>يمكنك العودة من أي جهاز بنفس الحساب.</p></div><button class="btn btn-outline" data-action="logout">تسجيل الخروج</button></div></div></article>
     </div></div>`;
 }
 function automationOption(value, title, description) { return `<label class="automation-option ${state.settings.automation === value ? "selected" : ""}"><input type="radio" name="automation" value="${value}" ${state.settings.automation === value ? "checked" : ""}><span class="radio"></span><strong>${title}</strong><p>${description}</p></label>`; }
@@ -301,7 +301,7 @@ app.addEventListener("click", async (event) => {
     if (installPrompt) {
       await installPrompt.prompt();
       const choice = await installPrompt.userChoice;
-      if (choice.outcome === "accepted") toast("تمت إضافة وظيفتي AI إلى جهازك");
+      if (choice.outcome === "accepted") toast("تمت إضافة وظّفني AI إلى جهازك");
       installPrompt = null;
     } else {
       toast("من قائمة المتصفح اختر «إضافة إلى الشاشة الرئيسية» لتثبيت التطبيق");
