@@ -1,4 +1,4 @@
-const STORAGE_KEY = "wazifati-ai-v1";
+const STORAGE_KEY = "wathifni-ai-v1";
 
 export function loadState(fallback) {
   try {
